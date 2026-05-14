@@ -1,10 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = []
-
 [project]
 name = "procura-backend"
 version = "0.1.0"

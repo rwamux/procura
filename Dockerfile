@@ -3,7 +3,13 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY backend/pyproject.toml .
-RUN pip install --no-cache-dir .
+RUN python -c "
+import tomllib
+with open('pyproject.toml', 'rb') as f:
+    deps = tomllib.load(f)['project']['dependencies']
+with open('deps.txt', 'w') as f:
+    f.write('\n'.join(deps))
+" && pip install --no-cache-dir -r deps.txt
 
 COPY backend/ .
 
