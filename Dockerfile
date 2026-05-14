@@ -1,10 +1,11 @@
 FROM python:3.12-slim
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 WORKDIR /app
 
-COPY backend/pyproject.toml .
-RUN python -c "import tomllib; deps=tomllib.loads(open('pyproject.toml','rb').read())['project']['dependencies']; open('deps.txt','w').write('\n'.join(deps))" \
-    && pip install --no-cache-dir -r deps.txt
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN UV_SYSTEM_PYTHON=1 uv sync --frozen --no-dev --no-install-project
 
 COPY backend/ .
 
