@@ -226,38 +226,46 @@ UI available at `http://localhost:3000`. All `/api/*` requests are proxied to th
 
 ---
 
-## Deployment (Railway)
+## Deployment
 
-The app deploys as two Railway services (backend + frontend) backed by a Railway Postgres plugin.
+The backend deploys to **Railway**, the frontend to **Vercel**.
 
-### Services
+### Backend (Railway)
 
-| Service | Root directory | Start command (via `railway.toml`) |
-|---|---|---|
-| Backend | `backend/` | `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-| Frontend | `frontend/` | `next start -p $PORT` |
+Add a Railway project with a **Postgres plugin** and one service connected to this repo.
 
-### Environment variables
+In the service **Deploy → Custom Start Command**:
+```
+cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
 
-**Backend**
+In the service **Deploy → Healthcheck Path**: `/health`
+
+Railpack detects Python via the root-level `requirements.txt` (which proxies to `backend/requirements.txt`).
+
+**Environment variables**
 
 | Variable | Source | Notes |
 |---|---|---|
 | `DATABASE_URL` | Railway Postgres plugin | Auto-injected. Accepts any `postgres://` format. |
 | `SECRET_KEY` | Manual | Random string, min 32 chars. |
 | `OPENROUTER_API_KEY` | Manual | From openrouter.ai |
-| `APP_URL` | Manual | Frontend Railway domain, e.g. `https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}` |
+| `APP_URL` | Manual | Vercel frontend URL |
 | `LANGCHAIN_TRACING_V2` | Optional | `true` to enable LangSmith tracing |
 | `LANGCHAIN_API_KEY` | Optional | From smith.langchain.com |
 | `LANGCHAIN_PROJECT` | Optional | Defaults to `procura` |
 
-**Frontend**
-
-| Variable | Source | Notes |
-|---|---|---|
-| `API_URL` | Manual | Backend Railway domain, e.g. `https://${{backend.RAILWAY_PUBLIC_DOMAIN}}` |
-
 `DATABASE_URL_SYNC` does not need to be set — it is derived automatically from `DATABASE_URL`.
+
+### Frontend (Vercel)
+
+Connect the repo to Vercel and set **Root Directory** to `frontend`. Vercel auto-detects Next.js.
+
+**Environment variables**
+
+| Variable | Value |
+|---|---|
+| `API_URL` | Your Railway backend URL, e.g. `https://procura-backend.up.railway.app` |
 
 ---
 
