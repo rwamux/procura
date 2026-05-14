@@ -16,7 +16,7 @@ Built as a showcase of agentic AI patterns: parallel fan-out execution, interrup
 | Migrations | Alembic |
 | Frontend | Next.js 15, React 19, Tailwind CSS, shadcn/ui |
 | Observability | LangSmith tracing, structured JSON logging |
-| Deployment | Railway |
+| Deployment | Docker, Railway (backend), Vercel (frontend) |
 
 ---
 
@@ -146,6 +146,7 @@ Generates all contract sections in parallel, then assembles and validates the co
 
 ```
 procurai/
+├── Dockerfile                       Backend container (used by Railway)
 ├── backend/
 │   ├── app/
 │   │   ├── api/
@@ -159,8 +160,6 @@ procurai/
 │   │   │   └── ai/                  Structured output schemas for LLM extraction
 │   │   ├── services/
 │   │   │   └── workflow_runner.py   SSE event loop, node timing, token tracking
-│   │   ├── storage/
-│   │   │   └── local.py             Local file storage (uploaded proposals)
 │   │   ├── workflows/
 │   │   │   ├── base.py              get_llm() — OpenRouter via langchain-openai
 │   │   │   ├── checkpointer.py      AsyncPostgresSaver init/teardown
@@ -178,14 +177,12 @@ procurai/
 │   │   └── main.py                  FastAPI app + lifespan
 │   ├── alembic/                     Database migrations
 │   ├── pyproject.toml
-│   ├── requirements.txt
-│   └── railway.toml
+│   └── requirements.txt
 └── frontend/
     ├── app/                         Next.js App Router pages
     ├── components/                  React components + shadcn/ui
     ├── next.config.ts               API proxy rewrite (→ API_URL env var)
-    ├── package.json
-    └── railway.toml
+    └── package.json
 ```
 
 ---
@@ -202,14 +199,13 @@ procurai/
 
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 
 cp .env.example .env
 # Edit .env — set DATABASE_URL, SECRET_KEY, OPENROUTER_API_KEY
 
-alembic upgrade head
-uvicorn app.main:app --reload
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
 ```
 
 API available at `http://localhost:8000`. Swagger docs at `http://localhost:8000/docs`.
@@ -232,16 +228,11 @@ The backend deploys to **Railway**, the frontend to **Vercel**.
 
 ### Backend (Railway)
 
-Add a Railway project with a **Postgres plugin** and one service connected to this repo.
-
-In the service **Deploy → Custom Start Command**:
-```
-cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
+Add a Railway project with a **Postgres plugin** and one service connected to this repo. Railway auto-detects the `Dockerfile` at the repo root and uses it to build and run the backend.
 
 In the service **Deploy → Healthcheck Path**: `/health`
 
-Railpack detects Python via the root-level `requirements.txt` (which proxies to `backend/requirements.txt`).
+Clear the **Custom Start Command** field if set — the `Dockerfile` `CMD` handles startup (runs Alembic migrations then starts uvicorn).
 
 **Environment variables**
 
